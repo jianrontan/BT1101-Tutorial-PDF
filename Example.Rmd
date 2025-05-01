@@ -1,0 +1,348 @@
+---
+title: "Tutorial 9: Linear Optimization (Part 2 is due on 18 Apr 9am)"
+author: "Tan Jian Ron"
+date: 'Due on 18 Apr 2025, 9:00 AM'
+output: 
+  pdf_document:
+    includes:
+      in_header: wrapping.tex
+editor_options:
+  markdown: 
+    wrap: 72
+---
+
+## Submission Instructions
+
+-   Select `output: html_document`.
+-   Include all code chunks, so include `echo=TRUE` in all chunks.
+-   Replace the placeholder text, "Type your answer here.", with your own.
+-   Submit *only* the required question for grading (Part 2: Submission). You can delete everything else for that submission. Remember to include any `library('package_name')` statements that you'll need to run your code and future reproduction.
+-   Rename your R Markdown file `T[X]_[MatricNumber].rmd`, and the output will automatically be `T[X]_[MatricNumber].html`.
+-   Submit your both R Markdown file (.rmd) and HTML (.html) to Luminus for tutorial assignments (upload to Luminus under the correct Submission Folder). We shall do the same for practical exam.
+-   **It is important to be able to code and produce your Rmarkdown output file *independently*.** You are responsible for de-bugging and programming in the practical exam.
+
+## Preparation
+
+```{r load-libraries, echo=TRUE, warning = FALSE, message = FALSE}
+# load required packages
+# install any package below if it's first time loaded in your computer.
+library(lpSolve)
+```
+
+Please use the following table template for both Parts 1 and 2, which comes from the Farmer Jean example in online learning. This table should exist OUTSIDE any `r` code chunks in order to format properly since it's markdown (html in this case) and not R. Here, we use a pair of '\$'s to enter/exit math mode (this is LaTeX, for those of you who are familiar with and which I used to produce the lecture handouts), which allows us to type symbols like $X_1$, $\leq$ for the "less than or equals" sign and $\geq$ for the "greater than or equals" sign. Use $\,$ (thin space), $\;$ (medium space), $\quad$ (large space, equivalent to curent font size), $\qquad$ (two large spaces) for spacing, so you can leave a blank for decision variables with coefficients of 0. (Note: don't put two \$'s next to each other. Always put a space in between.).
+
+| Maximize total profit using decision variables $X_1$, $X_2$ | Profit = 0.15 $X_1$ + 0.40 $X_2$ |
+|----------------------------------------------|--------------------------|
+| Subject to |  |
+| Budget Constraint | 0.20$X_1$ + 0.70$X_2$ $\leq$ 100 |
+| Space Constraint | $X_1$ + $X_2$ $\leq$ 200 |
+| Non-Negativity Constraint 1 | $X_1$ + $\quad$ $\geq$ 0 |
+| Non-Negativity Constraint 2 | $\quad$ + $X_2$ $\geq$ 0 |
+
+You may also refer to: <https://github.com/adam-p/markdown-here/wiki/Markdown-Cheatsheet#tables> for additional information regarding table formatting. It takes a while to get used to making tables in Markdown, and even minor changes may break the table. The most common mistakes are:
+
+-   not having a blank line before and a blank line after each table,
+-   not having the correct number of \|'s,
+-   not ending Math mode correctly, and
+-   putting two \$s next to each other.
+
+The lecturer will not entertain emails regarding table formatting questions. Also note that for this assignment, please *IGNORE* integer requirements, i.e., just use real number (e.g. fractional answers) if/when they come up. We shall leave it to the last tutorial assignment for integer optimization.
+
+## Part One: Lab Session Completion and Discussion
+
+### Question 1
+
+The examples we discussed in lecture were all maximization problems (specifically, to maximize profit). In this question we shall explore minimization.
+
+FunToys is famous for three types of toys: Cars, Animals, and Robots. Each year, near the holiday season, it receives large bulk orders for these items. To meet these orders, FunToys operates three small toy-making factories, A, B and C.
+
+-   Factory A costs \$1000 per day to operate, and can produce 30 cars, 20 animals and 30 robots per day.
+-   Factory B costs \$1200 per day to operate, and can produce 40 cars, 50 animals and 10 robots per day.
+-   Factory C costs \$1500 per day to operate, and can produce 50 cars, 40 animals and 15 robots per day.
+
+This Christmas, FunToys is required to deliver 5000 cars, 3000 animals and 2500 robots. You are tasked with finding out what is the most cost-efficient way to meet the order.
+
+(1a) Let us start by trying to formulate this as a optimisation problem.
+
+-   First, write down what you want to minimize.
+-   Second, write down your decision variables. What are you actually choosing?
+-   Third, write your objective function in terms of your decision variables.
+-   Fourth, write down the constraints: what are the contractual requirements you need to fulfill. What other constraints are there? Write them down in terms of your decision variables.
+-   Summarize them nicely in a table.
+
+**Firstly, we want to minimize the cost of operating the factories, secondly, we want to find out how many days to operate each factory, thirdly, objective function is Cost = X_1 * 1000 + X_2 * 1200 + X_3 * 1500, fourthly constraints are the requirements of 5000 cars, 3000 animals, 2500 robots, number of operating days, number of cars, animals, and robots must be integer and non-negative.**
+
+| Minimize total profit using decision variables $X_1$, $X_2$, $X_3$ | Cost = 1000 $X_1$ + 1200 $X_2$ + 1500 $X_3$ |
+|----------------------------------------------|--------------------------|
+| Subject to |  |
+| Car Constraint | 30$X_1$ + 40$X_2$ + 50$X_3$ $\geq$ 5000 |
+| Animal Constraint | 20$X_1$ + 50$X_2$ + 40$X_3$ $\geq$ 3000 |
+| Robot Constraint | 30$X_1$ + 10$X_2$ + 15$X_3$ $\geq$ 2500 |
+| Non-Negativity Constraint 1 | $X_1$ + $\quad$ + $\quad$ $\geq$ 0 |
+| Non-Negativity Constraint 2 | $\quad$ + $X_2$ + $\quad$ $\geq$ 0 |
+| Non-Negativity Constraint 3 | $\quad$ + $\quad$ + $X_3$ $\geq$ 0 |
+
+(1b) Write code to solve this optimisation problem. Report the optimal solution, and the value of the objective function at that solution. Interpret the solution: what do these numbers mean? (again, please ignore any integer requirements and just report fractional answers if they appear)
+
+**In the optimal solution, $X_1 = 47.62, X_2 = 0, X_3 = 71.42$ and the value of the objective function at this solution is 154761.9.**
+
+```{r q1b-lp, echo=TRUE}
+
+# minimize
+direction <- "min"
+
+# objective function (cost)
+objective_fn <- c(1000, 1200, 1500)
+
+# constraint matrix
+const_matrix <- matrix(c(30, 40, 50,
+                  20, 50, 40,
+                  30, 10, 15), ncol = 3, byrow = TRUE)
+
+# equality sign for each constraint
+const_dir <- c(">=", ">=", ">=")
+
+# constraint right hand side
+const_rhs <- c(5000, 3000, 2500)
+
+# lp to find the linear optimisation
+lp.solution <- lp(direction, objective_fn, const_matrix, const_dir, const_rhs, compute.sens = TRUE)
+lp.solution
+
+lp.solution$solution
+
+# Duals are arranged by each constraint, to produce 1 more car (from 5000 to 5001), total cost will increase by approximately $28.57
+# Factory B cost would need to decrease by approximately $9.52 before it becomes economical to use.
+lp.solution$duals
+
+```
+
+(1c) What if we impose an additional constraint that FunToys only has 60 days to complete the order? (Note that we can run all three factories *simultaneously*). What happens now?
+
+Re-produce a new table summarizing the optimisation problem (including the existing and new constraints), and write R code to solve it. What is the new solution, and what is the objective function value?
+
+| Minimize total cost using decision variables $X_1$, $X_2$, $X_3$ | Cost = 1000 $X_1$ + 1200 $X_2$ + 1500 $X_3$ |
+|----------------------------------------------|--------------------------|
+| Subject to |  |
+| Car Constraint | 30$X_1$ + 40$X_2$ + 50$X_3$ $\geq$ 5000 |
+| Animal Constraint | 20$X_1$ + 50$X_2$ + 40$X_3$ $\geq$ 3000 |
+| Robot Constraint | 30$X_1$ + 10$X_2$ + 15$X_3$ $\geq$ 2500 |
+| Time Constraint 1 | $X_1$ + $\quad$ + $\quad$ $\leq$ 60 |
+| Time Constraint 2 | $\quad$ + $X_2$ + $\quad$ $\leq$ 60 |
+| Time Constraint 3 | $\quad$ + $\quad$ + $X_3$ $\leq$ 60 |
+| Non-Negativity Constraint 1 | $X_1$ + $\quad$ + $\quad$ $\geq$ 0 |
+| Non-Negativity Constraint 2 | $\quad$ + $X_2$ + $\quad$ $\geq$ 0 |
+| Non-Negativity Constraint 3 | $\quad$ + $\quad$ + $X_3$ $\geq$ 0 |
+
+**Type your answer here.**
+
+```{r q1c-lp, echo=TRUE}
+
+# objective function (cost)
+objective_fn_new <- c(1000, 1200, 1500)
+
+# constraint matrix
+const_matrix_new <- matrix(c(30, 40, 50,
+                  20, 50, 40,
+                  30, 10, 15,
+                  1, 0, 0,
+                  0, 1, 0,
+                  0, 0, 1), ncol = 3, byrow = TRUE)
+
+# equality sign for each constraint
+const_dir_new <- c(">=", ">=", ">=", "<=", "<=", "<=")
+
+# constraint right hand side
+const_rhs_new <- c(5000, 3000, 2500, 60, 60, 60)
+
+# lp to find the linear optimization
+lp.solution_new <- lp("min", objective_fn_new, const_matrix_new, const_dir_new, const_rhs_new, compute.sens = TRUE)
+lp.solution_new
+
+lp.solution_new$solution
+
+# If you could increase Factory C's availability by one day (from 60 to 61 days), your total cost would decrease by approximately $11.11.
+lp.solution_new$duals
+
+```
+
+(1d) For the solution in 1c, which of the constraints are binding, and which are non-binding?
+
+**The binding constraints are the number of cars and robots produced, as well as factory C's availability**
+
+```{r q1d-lp, echo=TRUE}
+
+sum(lp.solution_new$solution * c(30, 40, 50))  # = 5000 exactly (binding)
+sum(lp.solution_new$solution * c(20, 50, 40))  # = 4044.444 > 3000 (non-binding)
+sum(lp.solution_new$solution * c(30, 10, 15))  # = 2500 exactly (binding)
+
+```
+
+(1e) Using your solution in 1c, print out the Shadow Prices. Interpret these values -- make sure you can explain why each shadow price is zero or why it is positive/negative! Your answer from part d) should also help you explain. (Note again, that we IGNORE integer requirements in this question, so your $X$ variables can be fractional...)
+
+**Shadow price: a shadow price of a constraint is the change in the value of the objective function (cost) per unit increase in the right-hand side value of that constraint**
+
+Car constraint: 30$X_1$ + 40$X_2$ + 50$X_3$ >= 5000
+For the car toy production constraint, it is binding and thus, has a shadow price value. The shadow price is positive because if have, we have to produce one additional car, we will incur an additional cost of $28.89.
+
+Animal constraint: 20$X_1$ + 50$X_2$ + 40$X_3$ >= 3000
+Since animal constraint is non-binding it has a shadow price of 0. If the animal production requirement were to increase by 1, we would not incur an additional cost as we are already producing a surplus of animals in our optimal solution.
+
+Time constraint 1: $X_1$ <= 60
+For the Factory A time constraint, it is non-binding and has shadow price of 0. If we have an additional hour of Factory A use, there would be no reduction in our total cost as we are already using less than 60 hours.
+
+Time constraint 3: $X_3$ <= 60
+For the Factory C time constraint, it is binding and thus has a shadow price value. The shadow price is negative because if we have an additional hour of Factory C use, we will reduce our total cost of production by $11.11.
+
+Non-negativity constraint 1 to 3:
+All non-negativity constraints have zero shadow prices because they are non-binding - all variables have positive values in the optimal solution.
+
+```{r q1e-lp, echo=TRUE}
+
+lp.solution_new$duals
+
+```
+
+## Part Two: Assignment Submission (To be submitted - 20 marks)
+
+### Question 2 (Total 20 marks)
+
+A company manufactures various models of a special type of footwear designed for professional dancers using different types of materials. The company uses four distinct materials to create these shoes: cardstock, satin, plain fabric, and leather. The company produces three models, each of which requires a certain amount of each material. The company has limited quantities of each material and seeks to maximize the profit by determining how many units of each product model to produce.
+
+The data provided shows
+
+• The number of square inches of each type of material used in each model of shoe
+
+• The amount of material available, and
+
+• The profit per model
+
+|  |  |  |  |  |
+|---------------|---------------|---------------|---------------|---------------|
+| **Material measured in square inches** | **Model 1** | **Model 2** | **Model 3** | **Available Material** |
+| **Cardstock** | 12 | 10 | 14 | 1200 |
+| **Satin** | 24 | 20 | 15 | 2000 |
+| **Plain Fabric** | 45 | 40 | 30 | 7500 |
+| **Leather** | 11 | 11 | 10 | 1000 |
+| **Profit per model** | \$50 | \$44 | \$40 |  |
+
+***Section I : Before attempting this section, it is recommended to have a basic understanding of key concepts in linear optimisation***
+
+Q2(a) Develop and solve an optimization model to determine the number of units each shoe model to produce in order to maximize total profit. Do not impose any integer constraints on the decision variables. (5 marks)
+
+-   Define the decision variable(s). Write down the decision variable(s) and its objective function clearly.
+
+-   Formulate and write down all the relevant constraints, along with its objective function and decision variables into one LaTeX table. Ensure all constraints are included in your answer. Do not solve the problem yet.
+
+::: {style="color: red"}
+Decision variables $X_1$, $X_2$, $X_3$, are the number of units of Model 1, Model 2, and Model 3 produced respectively.
+:::
+
+| Maximize total profit using decision variables $X_1$, $X_2$, $X_3$ | Profit = 50 $X_1$ + 44 $X_2$ + 40 $X_3$ |
+|----------------------------------------------|--------------------------|
+| Subject to |  |
+| Cardstock Constraint | 12$X_1$ + 10$X_2$ + 14$X_3$ $\leq$ 1200 |
+| Satin Constraint | 24$X_1$ + 20$X_2$ + 15$X_3$ $\leq$ 2000 |
+| Plain Fabric Constraint | 45$X_1$ + 40$X_2$ + 30$X_3$ $\leq$ 7500 |
+| Leather Constraint | 11$X_1$ + 11$X_2$ + 10$X_3$ $\leq$ 1000 |
+| Non-Negativity Constraint 1 | $X_1$ + $\quad$ + $\quad$ $\geq$ 0 |
+| Non-Negativity Constraint 2 | $\quad$ + $X_2$ + $\quad$ $\geq$ 0 |
+| Non-Negativity Constraint 3 | $\quad$ + $\quad$ + $X_3$ $\geq$ 0 |
+
+***Section II : In this section, solve the linear optimization problem using lpSolve package in R.***
+
+Q2(b) Solve the formulated linear optimization problem in R. (7 marks)
+
+-   Write the R codes for the constraints of this linear optimisation problem. Use `lpSolve` in R to solve your formulated linear problem.
+
+-   Calculate the optimal production quantities for each model (Model 1, Model 2, Model 3) and the optimal total profit. Provide a clear business recommendation based on the results.
+
+-   Determine which constraints are binding and explain why they are binding.
+
+``` {r q2b-lpSolve, echo = TRUE}
+
+obj_fn_2 <- c(50, 44, 40)
+const_matrix_2 <- matrix(c(12, 10, 14,
+                           24, 20, 15,
+                           45, 40, 30,
+                           11, 11, 10), ncol = 3, byrow = TRUE)
+const_dir_2 <- c("<=", "<=", "<=", "<=")
+const_rhs_2 <- c(1200, 2000, 7500, 1000)
+
+lp.solution_2 <- lp("max", obj_fn_2, const_matrix_2, const_dir_2, const_rhs_2, compute.sens = TRUE)
+lp.solution_2
+lp.solution_2$solution
+lp.solution_2$duals
+
+```
+
+::: {style="color: red"}
+Optimal production quantities for each model is 66.667, 0.0000, and 26.667 for models 1, 2, and 3 respectively. Maximum profit given the optimal production quantity is \$4400. Based on this result, the company should produce 66.667 units of model 1, 26.667 units of model 3, and don't produce any units of model 2.
+
+Satin constraint is binding and given the shadow prices, increasing the amount of satin available by 1 unit will increase the profit by \$0.80. Leather constraint is also binding and given the shadow prices, increasing the amount of leather available by 1 unit will increase the profit by \$2.80. Cardstock and plain fabric are non-binding constraints and increasing the amount of cardstock and plain fabric by 1 unit will not increase the profit at all as they are in surplus.
+
+The company is using all 2,000 square inches of available satin. This material is a limiting factor in production, meaning if the company had more satin, they could potentially produce more shoes and increase profit. All 1,000 square inches of available leather are being utilized. Like satin, leather is also a limiting factor in the production process. Thus, the binding factors are leather and satin.
+
+Non-negativity constraint for $X_2$ is binding and -\$2.80. If we increased the right hand side value of the non-negativity constraint such that amount of $X_2$ produced has to be more than or equal to 1, we will lose out on \$2.80 of profit, or if we were to include $X_2$ in the optimal solution, we would have to increase the profit of $X_2$ by \$2.80.
+:::
+
+***Section III : Apply sensitivity analysis in this section.***
+
+Q2(c) Analysis and Recommendations (7 marks)
+
+-   Calculate the shadow price associated with the leather constraint. Explain what this shadow price represents in the context of this problem.
+
+-   Describe and interpret the reduced cost associated with model 2. What does it tells us about the production decision for model 2?
+
+-   If the unit profit of model 1 is reduced to \$35.50, provide an explanation, how the optimal solution and total profit will be affected? Use sensitivity analysis to support your explanation.
+
+-   If the unit profit of model 3 is increased to \$42, explain how the optimal solution and total profit will be affected? Use sensitivity analysis to support your explanation.
+
+``` {r Q2c-lpSolve, echo = TRUE}
+
+lp.solution_2$duals
+
+lp.solution_2$duals.from[4]
+lp.solution_2$duals.to[4]
+
+obj_ranges <- data.frame(
+  Current = obj_fn_2,
+  Lower_Bound = lp.solution_2$sens.coef.from,
+  Upper_Bound = lp.solution_2$sens.coef.to
+)
+obj_ranges
+
+```
+
+``` {r q2c-lpSolveTest, echo = TRUE}
+
+obj_fn_test <- c(50, 44, 42)
+const_matrix_test <- matrix(c(12, 10, 14,
+                           24, 20, 15,
+                           45, 40, 30,
+                           11, 11, 10), ncol = 3, byrow = TRUE)
+const_dir_test <- c("<=", "<=", "<=", "<=")
+const_rhs_test <- c(1200, 2000, 7500, 1000)
+
+lp.solution_test <- lp("max", obj_fn_test, const_matrix_test, const_dir_test, const_rhs_test, compute.sens = TRUE)
+lp.solution_test
+lp.solution_test$solution
+lp.solution_test$duals
+
+```
+
+::: {style="color: red"}
+Leather constraint is binding and given the shadow prices, increasing the amount of leather available by 1 unit will increase the profit by \$2.80. This is valid while the amount of leather available is between 916.67 units and 1012.82 units. Below 916.67 units, the objective function would change such that the shadow price will increase from \$2.80 and above 1012.82 units, the objective function would change such that leather is no longer a binding constraint and shadow price will reduce from \$2.80 to $0.
+
+From the table, we can see that the profit of model 2 has to increase from \$44.00 to \$46.80 before model 2 can be included in the solution and be profitable to produce.
+
+Model 1: Profit can decrease to \$44.00 or increase to \$64.00 without changing the optimal solution structure
+
+Model 3: Profit can decrease to \$35.23 or increase to \$45.45 without changing the optimal solution structure
+
+If the profit of model 1 is reduced to \$35.50, it is no longer be optimal to produce model 1 as profit per unit no longer lies within the interval [\$44, \$64], and objective function is now $4000 maximum profit possible while producing 0 units of model 1 and 3 while producing 90.909 units of model 2.
+
+If the profit of model 3 is increased to \$42, it still lies within the interval [\$35.23, \$45.45] and the optimal units of production remains unchanged at 66.67 units of model 1, 0 units of model 2, and 26.67 units of model 3. However, the total profit increases to $4453.33 due to the increase in profit by model 3.
+:::
+
+Q2(d) Successfully debug and knitting the RMD to HTML for submission. (1 mark)

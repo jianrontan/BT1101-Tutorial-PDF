@@ -1,4 +1,4 @@
-# BT1101-Tutorial-PDF
+# BT1101-Tutorial-to-PDF
 Use this to create printable PDFs for your BT1101 Tutorials to use as a cheatsheet
 
 ### Install
